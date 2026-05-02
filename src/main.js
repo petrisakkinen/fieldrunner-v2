@@ -319,8 +319,8 @@ function createPlayer() {
   teammateRunTexture = loader.load(`${BASE}sprites/teammate/teammate_run_12f_256.png`);
 
   playerSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: runTex, transparent: true }));
-  playerSprite.scale.set(1.8, 1.8, 1);
-  playerSprite.position.y = 1.0;
+  playerSprite.scale.set(2.4, 2.4, 1);
+  playerSprite.position.y = 1.2;
   playerGroup.add(playerSprite);
 
   playerSpriteController = new PlayerSpriteController({ sprite: playerSprite, defaultState: 'run' });
