@@ -87,11 +87,7 @@ function init() {
   scene.fog = new THREE.Fog(0x3e8038, 14, 26);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-  // Lower, gentler down-tilt so the 3D horizon line lands roughly on the
-  // painted grass-to-crowd seam in the stadium panorama instead of pointing
-  // up into the sky.
-  camera.position.set(0, 4, 9);
-  camera.lookAt(0, 1, -28);
+  applyCameraForAspect();
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -578,6 +574,8 @@ function updateSmokeEffects(dt) {
 // ========== GAME FLOW ==========
 function startGame() {
   audio.init();
+  audio.warmUp();             // unlock the AudioContext inside the click gesture
+  audio.startCrowdAmbient();  // start ambient now so it's playing when the video ends
   const startEl = document.getElementById('startScreen');
   const videoEl = document.getElementById('startTransitionVideo');
 
@@ -596,12 +594,7 @@ function startGame() {
     videoEl.pause();
     startEl.style.display = 'none';
     startEl.classList.remove('fading');
-    // Re-init the WebAudio context after the HTML5 video had it. Browsers
-    // routinely suspend AudioContext while a <video> with audio is playing
-    // and only resume it on the next gesture-bound call — so we re-arm here
-    // before kicking off the in-game crowd loop.
     audio.init();
-    audio.startCrowdAmbient();
     resetGame();
     gameRunning = true;
   };
@@ -621,6 +614,7 @@ function startGame() {
 
 function restartGame() {
   audio.init();
+  audio.warmUp();
   audio.startCrowdAmbient();
   document.getElementById('gameOver').style.display = 'none';
   resetGame();
@@ -1048,9 +1042,28 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-function onResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
+function applyCameraForAspect() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const aspect = w / h;
+  // Portrait phones (aspect < 0.8) need a wider FOV and a pulled-back camera
+  // so that all three lanes (x = ±3) stay inside the frustum. The original
+  // tuning was for landscape ~1.78 and clipped the player out the sides on
+  // a phone.
+  if (aspect < 0.8) {
+    camera.fov = 78;
+    camera.position.set(0, 6, 12);
+  } else {
+    camera.fov = 60;
+    camera.position.set(0, 4, 9);
+  }
+  camera.aspect = aspect;
+  camera.lookAt(0, 1, -28);
   camera.updateProjectionMatrix();
+}
+
+function onResize() {
+  applyCameraForAspect();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 

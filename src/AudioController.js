@@ -23,6 +23,29 @@ export class AudioController {
     } catch (e) { /* not supported */ }
   }
 
+  /**
+   * Plays a near-silent oscillator burst inside a user gesture handler.
+   * Mobile Safari and Chrome Android only fully unlock the AudioContext if
+   * they observe an actual buffer playing through the destination during
+   * the gesture — `resume()` alone is not enough. Call this from the
+   * Aloita peli / Pelaa uudelleen click handlers.
+   */
+  warmUp() {
+    if (!this.ctx) return;
+    if (this.ctx.state !== 'running') this.ctx.resume();
+    try {
+      const ctx = this.ctx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain || ctx.destination);
+      gain.gain.value = 0.001;
+      osc.frequency.value = 440;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch (e) { /* ignore */ }
+  }
+
   _play(fn) {
     if (!this.ctx) return;
     if (this.ctx.state !== 'running') this.ctx.resume();
