@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sprite Viewer</title>
+  <style>
+    :root {
+      --bg: #111;
+      --panel: #1b1b1b;
+      --border: #333;
+      --fg: #eaeaea;
+      --muted: #888;
+      --accent: #6cabdd;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+    header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    select, input[type=range], button {
+      background: var(--panel);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    main { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 56px); }
+    aside {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 10px;
+    }
+    .item {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .item.selected { background: rgba(108,171,221,0.15); }
+    .item h3 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
+    .item .meta { color: var(--muted); font-size: 11px; }
+    section.viewer {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .canvas-row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+    .canvas-block { display: flex; flex-direction: column; gap: 6px; }
+    .canvas-block .label { color: var(--muted); font-size: 12px; }
+    canvas.checker, img.sheet {
+      border: 1px solid var(--border);
+      background: repeating-conic-gradient(#bbb 0% 25%, #999 0% 50%) 50% / 16px 16px;
+      image-rendering: pixelated;
+    }
+    .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .info pre {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px;
+      font-size: 12px;
+      overflow: auto;
+      max-height: 220px;
+    }
+    .empty { color: var(--muted); padding: 30px; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sprite Viewer</h1>
+    <label>Project <select id="filterProject"><option value="">All</option></select></label>
+    <label>Character <select id="filterCharacter"><option value="">All</option></select></label>
+    <label>Animation <select id="filterAnimation"><option value="">All</option></select></label>
+    <span id="count" style="margin-left:auto;color:var(--muted)"></span>
+  </header>
+  <main>
+    <aside id="list"></aside>
+    <section class="viewer" id="viewer">
+      <div class="empty">Pick a sprite sheet on the left.</div>
+    </section>
+  </main>
+  <script src="sprite_gallery_manifest.js"></script>
+  <script>
+    const sheets = window.SPRITE_SHEETS || [];
+    const limit = window.SPRITE_LATEST_LIMIT || 10;
+
+    const filterProject = document.getElementById('filterProject');
+    const filterCharacter = document.getElementById('filterCharacter');
+    const filterAnimation = document.getElementById('filterAnimation');
+    const listEl = document.getElementById('list');
+    const viewerEl = document.getElementById('viewer');
+    const countEl = document.getElementById('count');
+
+    const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
+    function fillSelect(sel, values) {
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">All</option>';
+      uniq(values).sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+      });
+      sel.value = cur;
+    }
+    fillSelect(filterProject, sheets.map(s => s.project));
+    fillSelect(filterCharacter, sheets.map(s => s.character));
+    fillSelect(filterAnimation, sheets.map(s => s.animation));
+
+    let selectedIdx = -1;
+    function visibleSheets() {
+      return sheets.filter(s =>
+        (!filterProject.value || s.project === filterProject.value) &&
+        (!filterCharacter.value || s.character === filterCharacter.value) &&
+        (!filterAnimation.value || s.animation === filterAnimation.value)
+      );
+    }
+
+    function renderList() {
+      const visible = visibleSheets();
+      countEl.textContent = `${visible.length} of ${sheets.length}`;
+      listEl.innerHTML = '';
+      visible.slice(0, limit > 0 ? Math.max(limit, visible.length) : visible.length).forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'item' + (i === selectedIdx ? ' selected' : '');
+        div.innerHTML = `<h3>${s.label}</h3><div class="meta">${s.character || '-'} / ${s.animation || '-'} · ${s.width}×${s.height}</div>`;
+        div.onclick = () => { selectedIdx = i; renderList(); renderViewer(s); };
+        listEl.appendChild(div);
+      });
+    }
+
+    [filterProject, filterCharacter, filterAnimation].forEach(el => el.onchange = () => { selectedIdx = -1; renderList(); viewerEl.innerHTML = '<div class="empty">Pick a sprite sheet on the left.</div>'; });
+
+    async function renderViewer(s) {
+      const cellSize = s.height; // assume square cells equal to sheet height
+      const frameCount = Math.floor(s.width / cellSize);
+      viewerEl.innerHTML = `
+        <h2 style="margin:0">${s.label}</h2>
+        <div class="meta" style="color:var(--muted)">${s.path}</div>
+        <div class="canvas-row">
+          <div class="canvas-block">
+            <div class="label">Sheet (${s.width}×${s.height}, ${frameCount} frames @ ${cellSize}px)</div>
+            <img class="sheet" src="${s.path}" alt="" />
+          </div>
+          <div class="canvas-block">
+            <div class="label">Animation preview</div>
+            <canvas class="checker" id="anim" width="${cellSize}" height="${cellSize}"></canvas>
+            <div class="controls">
+              <button id="playBtn">Pause</button>
+              FPS <select id="fps">
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="10">10</option>
+                <option value="12" selected>12</option>
+                <option value="16">16</option>
+                <option value="24">24</option>
+              </select>
+              <span id="frameLabel" class="meta"></span>
+            </div>
+          </div>
+        </div>
+        <div class="info"><pre id="info"></pre></div>
+      `;
+      document.getElementById('info').textContent = JSON.stringify(s, null, 2);
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = s.path;
+      await new Promise(r => { img.onload = r; img.onerror = r; });
+      const cv = document.getElementById('anim');
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      let frame = 0;
+      let playing = true;
+      let last = performance.now();
+      let fps = 12;
+      const fpsSel = document.getElementById('fps');
+      fpsSel.onchange = () => { fps = parseInt(fpsSel.value, 10); };
+      const playBtn = document.getElementById('playBtn');
+      playBtn.onclick = () => { playing = !playing; playBtn.textContent = playing ? 'Pause' : 'Play'; };
+      const frameLabel = document.getElementById('frameLabel');
+
+      function tick(now) {
+        const dt = (now - last) / 1000;
+        if (playing) {
+          if (dt >= 1 / fps) {
+            frame = (frame + 1) % frameCount;
+            last = now;
+          }
+        }
+        ctx.clearRect(0, 0, cellSize, cellSize);
+        ctx.drawImage(img, frame * cellSize, 0, cellSize, cellSize, 0, 0, cellSize, cellSize);
+        frameLabel.textContent = `frame ${frame + 1} / ${frameCount}`;
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    renderList();
+  </script>
+</body>
+</html>
