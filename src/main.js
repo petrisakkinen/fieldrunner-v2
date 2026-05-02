@@ -320,7 +320,7 @@ function createPlayer() {
 
   playerSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: runTex, transparent: true }));
   playerSprite.scale.set(2.9, 2.9, 1);
-  playerSprite.position.y = 1.4;
+  playerSprite.position.y = 1.0;
   playerGroup.add(playerSprite);
 
   playerSpriteController = new PlayerSpriteController({ sprite: playerSprite, defaultState: 'run' });
@@ -375,8 +375,8 @@ function createDefender(lane) {
   // fog: false so the painted-grass-tone fog can't wash these characters out
   // before the player can read their kit colour at distance.
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, fog: false }));
-  sprite.scale.set(2.4, 2.4, 1);
-  sprite.position.y = 1.2;
+  sprite.scale.set(2.9, 2.9, 1);
+  sprite.position.y = 1.0;
   group.add(sprite);
 
   // Invisible shadow proxy so the defender still drops a shadow on the field.
@@ -416,8 +416,8 @@ function createTeammate(lane) {
   tex.offset.x = animator.currentFrame / 12;
 
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, fog: false }));
-  sprite.scale.set(2.4, 2.4, 1);
-  sprite.position.y = 1.2;
+  sprite.scale.set(2.9, 2.9, 1);
+  sprite.position.y = 1.0;
   group.add(sprite);
 
   const shadowGeo = new THREE.BoxGeometry(0.6, 1.6, 0.3);
