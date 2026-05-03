@@ -12,7 +12,12 @@ const WORLD_SPEED_INIT = 0.22;
 const WORLD_SPEED_MAX = 0.55;
 const SPAWN_INTERVAL_INIT = 70;
 const SPAWN_INTERVAL_MIN = 30;
-const FIELD_LENGTH = 30;
+const FIELD_LENGTH = 50;
+// Pitch mesh extends much further than the line-wrap distance so the
+// dark-green field reaches all the way to the painted stadium tier in
+// the panorama. Lines/dividers fade into fog before this anyway, so we
+// don't need extra geometry for the deep portion.
+const FIELD_MESH_LENGTH = 200;
 const DEFENDER_Z_START = -38;
 
 const SPRITE_RUN_FPS = 12;
@@ -123,8 +128,10 @@ function init() {
   const fieldTexture = makeStripedGrassTexture();
   fieldTexture.wrapS = THREE.RepeatWrapping;
   fieldTexture.wrapT = THREE.RepeatWrapping;
-  fieldTexture.repeat.set(1, 12);
-  const fieldGeo = new THREE.PlaneGeometry(14, FIELD_LENGTH);
+  // Mow stripe density: 12 stripes / 50 units in the original tuning. Keep
+  // the same look on the longer pitch by scaling proportionally.
+  fieldTexture.repeat.set(1, Math.round((12 / 50) * FIELD_MESH_LENGTH));
+  const fieldGeo = new THREE.PlaneGeometry(14, FIELD_MESH_LENGTH);
   const fieldMat = new THREE.MeshPhongMaterial({
     map: fieldTexture,
     shininess: 24,
@@ -134,8 +141,9 @@ function init() {
   field.rotation.x = -Math.PI / 2;
   field.position.y = -0.01;
   // Offset so the near edge sits a touch behind the camera (z>10 is camera
-  // territory) and the far edge fades into the painted horizon, not above it.
-  field.position.z = -FIELD_LENGTH / 2 + 6;
+  // territory) and the far edge runs deep enough that fog blends it into
+  // the painted stadium tier with no panorama-grass strip showing through.
+  field.position.z = -FIELD_MESH_LENGTH / 2 + 6;
   field.receiveShadow = true;
   scene.add(field);
 
@@ -319,8 +327,13 @@ function createPlayer() {
   teammateRunTexture = loader.load(`${BASE}sprites/teammate/teammate_run_12f_256.png`);
 
   playerSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: runTex, transparent: true }));
-  playerSprite.scale.set(3.4, 3.4, 1);
-  playerSprite.position.y = 0.7;
+  // Pivot at bottom-center so the sprite's lower edge sits on the pitch
+  // regardless of scale — avoids the "feet sinking into grass" bug we hit
+  // when the pivot was the sprite centre and we had to recompute position.y
+  // every time the scale changed.
+  playerSprite.center.set(0.5, 0);
+  playerSprite.scale.set(3.0, 3.0, 1);
+  playerSprite.position.y = 0.02;
   playerGroup.add(playerSprite);
 
   playerSpriteController = new PlayerSpriteController({ sprite: playerSprite, defaultState: 'run' });
@@ -375,8 +388,9 @@ function createDefender(lane) {
   // fog: false so the painted-grass-tone fog can't wash these characters out
   // before the player can read their kit colour at distance.
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, fog: false }));
+  sprite.center.set(0.5, 0);
   sprite.scale.set(2.9, 2.9, 1);
-  sprite.position.y = 1.0;
+  sprite.position.y = 0.02;
   group.add(sprite);
 
   // Invisible shadow proxy so the defender still drops a shadow on the field.
@@ -416,8 +430,9 @@ function createTeammate(lane) {
   tex.offset.x = animator.currentFrame / 12;
 
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, fog: false }));
+  sprite.center.set(0.5, 0);
   sprite.scale.set(2.9, 2.9, 1);
-  sprite.position.y = 1.0;
+  sprite.position.y = 0.02;
   group.add(sprite);
 
   const shadowGeo = new THREE.BoxGeometry(0.6, 1.6, 0.3);
