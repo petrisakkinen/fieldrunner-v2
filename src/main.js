@@ -17,7 +17,11 @@ const FIELD_LENGTH = 50;
 // reaches the painted stadium tier in the panorama with no panorama-grass
 // strip showing through. Tuned so the far edge meets the tier line — go
 // too long and the pitch overshoots into the stands.
-const FIELD_MESH_LENGTH = 120;
+const FIELD_MESH_LENGTH = 100;
+// Single source of truth for the ball radius so the geometry size and the
+// resting Y position stay in sync (Y = radius keeps the ball just touching
+// the pitch instead of half-buried).
+const PLAYER_BALL_RADIUS = 0.22;
 const DEFENDER_Z_START = -38;
 
 const SPRITE_RUN_FPS = 12;
@@ -358,10 +362,10 @@ function createPlayer() {
   playerGroup.add(shadowProxy);
 
   // Ball stays as a 3D mesh — the rainbow flick / pass arcs are driven by code.
-  const ballGeo = new THREE.SphereGeometry(0.15, 16, 16);
+  const ballGeo = new THREE.SphereGeometry(PLAYER_BALL_RADIUS, 16, 16);
   const ballMat = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 60 });
   playerBall = new THREE.Mesh(ballGeo, ballMat);
-  playerBall.position.set(0, 0.15, -0.5);
+  playerBall.position.set(0, PLAYER_BALL_RADIUS, -0.5);
   playerBall.castShadow = true;
   playerGroup.add(playerBall);
 
@@ -661,7 +665,7 @@ function resetGame() {
   passReturnTarget = null;
 
   playerBall.visible = true;
-  playerBall.position.set(0, 0.15, -0.5);
+  playerBall.position.set(0, PLAYER_BALL_RADIUS, -0.5);
 
   fireworks.forEach(fw => scene.remove(fw));
   fireworks = [];
@@ -849,12 +853,12 @@ function update(dt) {
     const ballZ = 0.6 - t * 1.1;
     const peakT = 0.45;
     const h = -(t - peakT) * (t - peakT) / (peakT * peakT) + 1;
-    const ballY = 0.15 + h * 3.8;
+    const ballY = PLAYER_BALL_RADIUS + h * 3.8;
     playerBall.position.set(0, ballY, ballZ);
     playerBall.rotation.x += dt * 14;
     if (t >= 1) {
       isBouncing = false;
-      playerBall.position.set(0, 0.15, -0.5);
+      playerBall.position.set(0, PLAYER_BALL_RADIUS, -0.5);
       playerBall.visible = true;
     }
   }
@@ -904,7 +908,7 @@ function update(dt) {
         passBall = null;
         isPassing = false;
         playerBall.visible = true;
-        playerBall.position.set(0, 0.15, -0.5);
+        playerBall.position.set(0, PLAYER_BALL_RADIUS, -0.5);
       }
       if (passBall && passBall.position.z > playerWorldZ + 3) { gameOver(); return; }
     }
@@ -913,7 +917,7 @@ function update(dt) {
   if (passReturnBall) {
     // Target lands the ball just in front of the player (toward where Repo
     // can dribble it next), not behind him. Also keep it at dribble height.
-    const target = new THREE.Vector3(playerGroup.position.x, 0.15, playerGroup.position.z - 1);
+    const target = new THREE.Vector3(playerGroup.position.x, PLAYER_BALL_RADIUS, playerGroup.position.z - 1);
     const dir = new THREE.Vector3().subVectors(target, passReturnBall.position);
     const dist = dir.length();
     if (dist < 2.0) {
@@ -922,7 +926,7 @@ function update(dt) {
       passReturnTarget = null;
       isPassing = false;
       playerBall.visible = true;
-      playerBall.position.set(0, 0.15, -0.5);
+      playerBall.position.set(0, PLAYER_BALL_RADIUS, -0.5);
       score += 5;
       updateScoreHud();
       audio.playSuccessPassSound();
@@ -962,7 +966,7 @@ function update(dt) {
     playerBall.position.z = -0.4 - kickCurve * 4.0;
     const foot = Math.sin(runPhase) > 0 ? 1 : -1;
     playerBall.position.x = foot * (0.1 + kickCurve * 0.4);
-    playerBall.position.y = 0.15 + Math.pow(Math.abs(Math.sin(runPhase)), 8) * 0.2;
+    playerBall.position.y = PLAYER_BALL_RADIUS + Math.pow(Math.abs(Math.sin(runPhase)), 8) * 0.2;
     playerBall.rotation.x -= worldSpeed * 4;
     playerBall.rotation.z = foot * 0.1;
   }
