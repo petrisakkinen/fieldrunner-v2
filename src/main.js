@@ -13,11 +13,11 @@ const WORLD_SPEED_MAX = 0.55;
 const SPAWN_INTERVAL_INIT = 70;
 const SPAWN_INTERVAL_MIN = 30;
 const FIELD_LENGTH = 50;
-// Pitch mesh extends much further than the line-wrap distance so the
-// dark-green field reaches all the way to the painted stadium tier in
-// the panorama. Lines/dividers fade into fog before this anyway, so we
-// don't need extra geometry for the deep portion.
-const FIELD_MESH_LENGTH = 200;
+// Pitch mesh extends past the line-wrap distance so the dark-green field
+// reaches the painted stadium tier in the panorama with no panorama-grass
+// strip showing through. Tuned so the far edge meets the tier line — go
+// too long and the pitch overshoots into the stands.
+const FIELD_MESH_LENGTH = 120;
 const DEFENDER_Z_START = -38;
 
 const SPRITE_RUN_FPS = 12;
@@ -31,6 +31,11 @@ let defenderRunTexture = null;
 let teammateRunTexture = null;
 
 let scene, camera, renderer, clock;
+// Player's base Z position. Tuned per aspect in applyCameraForAspect():
+// portrait phones bring Repo closer (z=5) so he reads big enough on a
+// narrow screen; landscape keeps him at z=3 so his feet stay on screen
+// inside the narrower vertical FOV.
+let playerBaseZ = 3;
 let player, playerBall, playerGroup;
 let playerSprite;
 let playerSpriteController;
@@ -360,7 +365,7 @@ function createPlayer() {
   playerBall.castShadow = true;
   playerGroup.add(playerBall);
 
-  playerGroup.position.set(LANES[1], 0, 3);
+  playerGroup.position.set(LANES[1], 0, playerBaseZ);
   playerGroup.scale.set(1.5, 1.5, 1.5);
   scene.add(playerGroup);
 }
@@ -667,7 +672,7 @@ function resetGame() {
   smokeEffects.forEach(s => scene.remove(s));
   smokeEffects = [];
 
-  playerGroup.position.set(LANES[1], 0, 3);
+  playerGroup.position.set(LANES[1], 0, playerBaseZ);
   playerSpriteController.setState('run');
   updateScoreHud();
   updateMatchClock();
@@ -1064,17 +1069,22 @@ function applyCameraForAspect() {
   // Portrait phones (aspect < 0.8) need a wider FOV and a pulled-back camera
   // so that all three lanes (x = ±3) stay inside the frustum. The original
   // tuning was for landscape ~1.78 and clipped the player out the sides on
-  // a phone.
+  // a phone. We also bring Repo closer to the camera in portrait so he reads
+  // big enough on a narrow screen — landscape can't do this without losing
+  // his feet off the bottom inside its narrower 60° vertical FOV.
   if (aspect < 0.8) {
     camera.fov = 78;
     camera.position.set(0, 6, 12);
+    playerBaseZ = 5;
   } else {
     camera.fov = 60;
     camera.position.set(0, 4, 9);
+    playerBaseZ = 3;
   }
   camera.aspect = aspect;
   camera.lookAt(0, 1, -28);
   camera.updateProjectionMatrix();
+  if (playerGroup) playerGroup.position.z = playerBaseZ;
 }
 
 function onResize() {
