@@ -81,10 +81,10 @@ function init() {
   stadiumTexture.wrapS = THREE.RepeatWrapping;
   stadiumTexture.wrapT = THREE.RepeatWrapping;
   scene.background = stadiumTexture;
-  // Fog colour matches the dark stripe of the procedural pitch texture and
-  // sits close to the panorama's painted grass tone, so the play strip
-  // blends gently into the backdrop instead of contrasting against it.
-  scene.fog = new THREE.Fog(0x3e8038, 14, 26);
+  // Fog colour exactly matches the dark stripe of the procedural pitch
+  // texture, so the far end of the play strip stays uniformly dark green
+  // all the way out instead of fading toward the brighter painted grass.
+  scene.fog = new THREE.Fog(0x1d4823, 14, 26);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
   applyCameraForAspect();
@@ -221,13 +221,13 @@ function makeStripedGrassTexture() {
     const dark = i % 2 === 0;
     const grd = ctx.createLinearGradient(0, i * size / stripeCount, size, i * size / stripeCount);
     if (dark) {
-      grd.addColorStop(0, '#3e8038');
-      grd.addColorStop(0.5, '#4a9143');
-      grd.addColorStop(1, '#3e8038');
+      grd.addColorStop(0, '#1d4823');
+      grd.addColorStop(0.5, '#26572a');
+      grd.addColorStop(1, '#1d4823');
     } else {
-      grd.addColorStop(0, '#56a64f');
-      grd.addColorStop(0.5, '#65b85d');
-      grd.addColorStop(1, '#56a64f');
+      grd.addColorStop(0, '#2a6332');
+      grd.addColorStop(0.5, '#33773c');
+      grd.addColorStop(1, '#2a6332');
     }
     ctx.fillStyle = grd;
     ctx.fillRect(0, i * size / stripeCount, size, size / stripeCount);
@@ -319,8 +319,8 @@ function createPlayer() {
   teammateRunTexture = loader.load(`${BASE}sprites/teammate/teammate_run_12f_256.png`);
 
   playerSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: runTex, transparent: true }));
-  playerSprite.scale.set(2.9, 2.9, 1);
-  playerSprite.position.y = 1.0;
+  playerSprite.scale.set(3.4, 3.4, 1);
+  playerSprite.position.y = 0.7;
   playerGroup.add(playerSprite);
 
   playerSpriteController = new PlayerSpriteController({ sprite: playerSprite, defaultState: 'run' });
@@ -981,7 +981,7 @@ function update(dt) {
     // Silhouette tint: far defenders are rendered noticeably darker so the
     // player can read their position before they emerge from the fog.
     const distance = playerGroup.position.z - def.position.z;
-    const tint = Math.max(0.15, 1 - Math.min(0.85, Math.max(0, (distance - 5) / 20)));
+    const tint = Math.max(0.7, 1 - Math.min(0.3, Math.max(0, (distance - 10) / 35)));
     def.children[0].material.color.setRGB(tint, tint, tint);
     if (!def.userData.passed && def.position.z > playerGroup.position.z + 1) {
       def.userData.passed = true;
@@ -1014,7 +1014,7 @@ function update(dt) {
     tm.position.z += worldSpeed + defenderRunSpeed;
     tm.userData.animator.update(dt);
     const distance = playerGroup.position.z - tm.position.z;
-    const tint = Math.max(0.15, 1 - Math.min(0.85, Math.max(0, (distance - 5) / 20)));
+    const tint = Math.max(0.7, 1 - Math.min(0.3, Math.max(0, (distance - 10) / 35)));
     tm.children[0].material.color.setRGB(tint, tint, tint);
     if (!tm.userData.passed && tm.position.z > playerGroup.position.z + 1) tm.userData.passed = true;
     const dx = Math.abs(tm.position.x - playerGroup.position.x);
