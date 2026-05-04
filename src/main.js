@@ -22,6 +22,12 @@ const FIELD_MESH_LENGTH = 90;
 // resting Y position stay in sync (Y = radius keeps the ball just touching
 // the pitch instead of half-buried).
 const PLAYER_BALL_RADIUS = 0.22;
+// Pass ball spawns ~2 units in front of the player (player.z - 2), which
+// puts it noticeably further from the camera than the dribble ball. With
+// the same physical radius it would appear ~17% smaller on screen at the
+// moment of release. Bump the radius so the kicked ball reads at roughly
+// the same size as the dribble ball when it leaves Repo's foot.
+const PASS_BALL_RADIUS = 0.28;
 const DEFENDER_Z_START = -38;
 
 const SPRITE_RUN_FPS = 12;
@@ -460,17 +466,24 @@ function createTeammate(lane) {
 }
 
 function createPassBall() {
-  // Sized to match the player-held dribble ball so the return pass reads
-  // as the same physical ball coming back, not a bigger object.
-  const ballGeo = new THREE.SphereGeometry(0.22, 16, 16);
+  // Slightly larger than the dribble ball so it reads at the same on-screen
+  // size when it spawns ~2 units further from the camera (perspective).
+  const ballGeo = new THREE.SphereGeometry(PASS_BALL_RADIUS, 16, 16);
   const ballMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   const ball = new THREE.Mesh(ballGeo, ballMat);
-  const patchGeo = new THREE.SphereGeometry(0.09, 6, 6);
+  // Patch geometry + offsets scale with the ball so the dark "panels"
+  // stay seated on the surface instead of floating off it.
+  const patchScale = PASS_BALL_RADIUS / 0.22;
+  const patchGeo = new THREE.SphereGeometry(0.09 * patchScale, 6, 6);
   const patchMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
   for (let i = 0; i < 4; i++) {
     const patch = new THREE.Mesh(patchGeo, patchMat);
     const angle = (i / 4) * Math.PI * 2;
-    patch.position.set(Math.cos(angle) * 0.24, Math.sin(angle) * 0.12, Math.sin(angle + 1) * 0.15);
+    patch.position.set(
+      Math.cos(angle) * 0.24 * patchScale,
+      Math.sin(angle) * 0.12 * patchScale,
+      Math.sin(angle + 1) * 0.15 * patchScale,
+    );
     ball.add(patch);
   }
   ball.castShadow = true;
@@ -838,7 +851,7 @@ function update(dt) {
     playerBall.visible = false;
     playerSpriteController.setState('pass');
     passBall = createPassBall();
-    passBall.position.set(LANES[currentLane], 0.22, playerGroup.position.z - 2);
+    passBall.position.set(LANES[currentLane], PASS_BALL_RADIUS, playerGroup.position.z - 2);
     passBall.userData.startZ = passBall.position.z;
     passBall.userData.stopped = false;
     passBall.userData.stoppedZ = null;
@@ -867,7 +880,7 @@ function update(dt) {
     if (!passBall.userData.stopped) {
       passBall.position.z -= PASS_SPEED;
       passBall.rotation.x -= 0.3;
-      passBall.position.y = 0.22;
+      passBall.position.y = PASS_BALL_RADIUS;
       for (let i = defenders.length - 1; i >= 0; i--) {
         const def = defenders[i];
         const dx = Math.abs(def.position.x - passBall.position.x);
@@ -884,7 +897,7 @@ function update(dt) {
           scene.remove(passBall);
           passBall = null;
           passReturnBall = createPassBall();
-          passReturnBall.position.set(tm.position.x, 0.22, tm.position.z);
+          passReturnBall.position.set(tm.position.x, PASS_BALL_RADIUS, tm.position.z);
           passReturnTarget = new THREE.Vector3(LANES[currentLane], 0.33, playerGroup.position.z);
           scene.add(passReturnBall);
           createSmokeEffect(tm.position);
