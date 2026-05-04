@@ -167,12 +167,16 @@ canvas { display: block; touch-action: none; }
 /* ---------- CELEBRATION (dramatic milestone toast) ---------- */
 #celebration {
   display: none; position: absolute; top: 18%; left: 50%; transform: translate(-50%,-50%);
-  font-size: 56px; font-weight: 900; color: #ffd600; text-align: center;
-  letter-spacing: 2px;
+  /* Font + tracking + max width all scale with viewport so the toast fits
+     a narrow phone (was: fixed 56px / nowrap, which clipped on portrait). */
+  font-size: clamp(26px, 7vw, 56px);
+  letter-spacing: clamp(0.5px, 0.3vw, 2px);
+  max-width: 92vw;
+  font-weight: 900; color: #ffd600; text-align: center;
   font-family: 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
   text-transform: uppercase;
-  pointer-events: none; z-index: 10; white-space: nowrap;
-  -webkit-text-stroke: 2px #1a0900;
+  pointer-events: none; z-index: 10;
+  -webkit-text-stroke: clamp(1px, 0.25vw, 2px) #1a0900;
   text-shadow:
     0 0 18px #ff8800,
     0 0 40px #ff4400,

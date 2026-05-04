@@ -17,7 +17,7 @@ const FIELD_LENGTH = 50;
 // reaches the painted stadium tier in the panorama with no panorama-grass
 // strip showing through. Tuned so the far edge meets the tier line — go
 // too long and the pitch overshoots into the stands.
-const FIELD_MESH_LENGTH = 100;
+const FIELD_MESH_LENGTH = 90;
 // Single source of truth for the ball radius so the geometry size and the
 // resting Y position stay in sync (Y = radius keeps the ball just touching
 // the pitch instead of half-buried).
